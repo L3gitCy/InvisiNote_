@@ -1,134 +1,217 @@
 import org.audiveris.OMRProcessor;
-
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
 public class InvisiNoteApp extends JFrame {
 
     private JLabel titleLabel;
     private JLabel fileLabel;
+    private JProgressBar progressBar;
     private OMRProcessor omrProcessor;
+    private DefaultListModel<String> savedFilesModel;
+    private JList<String> savedFilesList;
 
     public InvisiNoteApp() {
-        // Initialize the OMRProcessor
         omrProcessor = new OMRProcessor();
-
-        // Setup your GUI components here
         initUI();
+        loadSavedFiles();
     }
 
     private void initUI() {
-        // Set a background color or image
         setLayout(new BorderLayout());
-        setBackground(new Color(240, 240, 240)); // Light grey background
+        setBackground(new Color(45, 45, 48)); // Dark background
 
-        // Create a title panel
         JPanel titlePanel = new JPanel();
-        titlePanel.setBackground(new Color(255, 255, 255, 150)); // Semi-transparent white
-        titlePanel.setLayout(new FlowLayout());
+        titlePanel.setBackground(new Color(45, 45, 48));
+        titlePanel.setLayout(new FlowLayout(FlowLayout.CENTER, 20, 20));
+        titlePanel.setBorder(new EmptyBorder(10, 0, 10, 0));
 
         titleLabel = new JLabel("InvisiNote");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 36));
-        titleLabel.setForeground(Color.BLUE);
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 36));
+        titleLabel.setForeground(new Color(135, 206, 250)); // Light blue
         titlePanel.add(titleLabel);
 
-        // Create a button panel
         JPanel buttonPanel = new JPanel();
-        buttonPanel.setLayout(new FlowLayout());
-        buttonPanel.setBackground(new Color(255, 255, 255, 150)); // Semi-transparent white
+        buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 20, 20));
+        buttonPanel.setBackground(new Color(45, 45, 48));
 
-        JButton processButton = new JButton("Process Sheet Music");
-        processButton.setFont(new Font("Arial", Font.PLAIN, 18));
+        JButton processButton = createStyledButton("Process Sheet Music");
         processButton.addActionListener(e -> selectAndProcessFile());
 
-        JButton exitButton = new JButton("Exit");
-        exitButton.setFont(new Font("Arial", Font.PLAIN, 18));
-        exitButton.addActionListener(e -> System.exit(0)); // Exit button
+        JButton exitButton = createStyledButton("Exit");
+        exitButton.addActionListener(e -> System.exit(0));
 
         buttonPanel.add(processButton);
         buttonPanel.add(exitButton);
 
-        // Add panels to the frame
+        // Progress bar setup
+        progressBar = new JProgressBar(0, 100);
+        progressBar.setStringPainted(true);
+        progressBar.setForeground(new Color(135, 206, 250));
+        progressBar.setBackground(new Color(64, 64, 66));
+        progressBar.setBorderPainted(false);
+        progressBar.setVisible(false);
+
         add(titlePanel, BorderLayout.NORTH);
         add(buttonPanel, BorderLayout.CENTER);
+        add(progressBar, BorderLayout.SOUTH);
+
+        // Saved Files Panel
+        JPanel savedFilesPanel = createSavedFilesPanel();
+        add(savedFilesPanel, BorderLayout.EAST);
 
         setTitle("Invisi Note");
-        setSize(600, 400); // Adjusted size
+        setSize(800, 450); // Adjusted size for the new panel
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setResizable(false);
     }
 
+    private JPanel createSavedFilesPanel() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BorderLayout());
+        panel.setBackground(new Color(45, 45, 48));
+        panel.setBorder(new EmptyBorder(10, 10, 10, 10));
+
+        JLabel savedFilesLabel = new JLabel("Saved MusicXML Files:");
+        savedFilesLabel.setForeground(Color.WHITE);
+        savedFilesLabel.setFont(new Font("Segoe UI", Font.PLAIN, 18));
+        panel.add(savedFilesLabel, BorderLayout.NORTH);
+
+        savedFilesModel = new DefaultListModel<>();
+        savedFilesList = new JList<>(savedFilesModel);
+        savedFilesList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        savedFilesList.setBackground(new Color(64, 64, 66));
+        savedFilesList.setForeground(Color.WHITE);
+        JScrollPane scrollPane = new JScrollPane(savedFilesList);
+        panel.add(scrollPane, BorderLayout.CENTER);
+
+        JButton loadButton = createStyledButton("Load Selected File");
+        loadButton.addActionListener(e -> loadSelectedFile());
+        panel.add(loadButton, BorderLayout.SOUTH);
+
+        return panel;
+    }
+
+    private JButton createStyledButton(String text) {
+        JButton button = new JButton(text);
+        button.setFont(new Font("Segoe UI", Font.PLAIN, 18));
+        button.setForeground(Color.WHITE);
+        button.setBackground(new Color(70, 130, 180));
+        button.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
+        button.setFocusPainted(false);
+        return button;
+    }
+
     private void selectAndProcessFile() {
-        // Use a file chooser to select an image file
         JFileChooser fileChooser = new JFileChooser();
         int returnValue = fileChooser.showOpenDialog(this);
         if (returnValue == JFileChooser.APPROVE_OPTION) {
             File selectedFile = fileChooser.getSelectedFile();
-            processSheetMusic(selectedFile);
+            new Thread(() -> processSheetMusic(selectedFile)).start();
         }
     }
 
     private void processSheetMusic(File inputFile) {
         try {
-            // Check if the file exists before starting
             if (!inputFile.exists()) {
                 JOptionPane.showMessageDialog(this, "File does not exist: " + inputFile.getAbsolutePath());
                 return;
             }
 
-            // Process the file using the OMRProcessor
-            String musicXmlFilePath = omrProcessor.process(inputFile);
+            SwingUtilities.invokeLater(() -> {
+                progressBar.setValue(0);
+                progressBar.setVisible(true);
+            });
 
-            // After processing, get the generated image path
+            for (int i = 1; i <= 100; i++) {
+                Thread.sleep(30);
+                final int progressValue = i;
+                SwingUtilities.invokeLater(() -> progressBar.setValue(progressValue));
+            }
+
+            String musicXmlFilePath = omrProcessor.process(inputFile);
             String generatedImagePath = getGeneratedImagePath(inputFile);
 
-            // Display the sheet music with the letter notes overlay
             displaySheetMusicWithNotes(generatedImagePath);
 
-        } catch (IOException e) {
-            JOptionPane.showMessageDialog(this, "I/O error during processing: " + e.getMessage());
-            e.printStackTrace();
-        } catch (InterruptedException e) {
-            JOptionPane.showMessageDialog(this, "Processing was interrupted: " + e.getMessage());
-            e.printStackTrace();
+            SwingUtilities.invokeLater(() -> {
+                progressBar.setValue(100);
+                progressBar.setVisible(false);
+                savedFilesModel.addElement(musicXmlFilePath); // Add new file to saved list
+            });
+
+        } catch (IOException | InterruptedException e) {
+            JOptionPane.showMessageDialog(this, "An error occurred: " + e.getMessage());
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "An unexpected error occurred: " + e.getMessage());
-            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void loadSavedFiles() {
+        // Prompt user to select the directory containing the MusicXML files
+        JFileChooser directoryChooser = new JFileChooser();
+        directoryChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+        int result = directoryChooser.showOpenDialog(this);
+
+        if (result == JFileChooser.APPROVE_OPTION) {
+            File directory = directoryChooser.getSelectedFile();
+            loadFilesFromDirectory(directory);
+        } else {
+            JOptionPane.showMessageDialog(this, "Directory selection canceled.");
+        }
+    }
+
+    private void loadFilesFromDirectory(File directory) {
+        // Check if the directory exists and is a directory
+        if (directory.exists() && directory.isDirectory()) {
+            File[] files = directory.listFiles((dir, name) -> name.toLowerCase().endsWith(".xml"));
+
+            if (files != null) {
+                // Clear the current model to prevent duplicates
+                savedFilesModel.clear();
+
+                // Add each MusicXML file to the list model
+                for (File file : files) {
+                    savedFilesModel.addElement(file.getName());
+                }
+            }
+        } else {
+            JOptionPane.showMessageDialog(this, "Directory not found or invalid path.");
+        }
+    }
+
+    private void loadSelectedFile() {
+        String selectedFile = savedFilesList.getSelectedValue();
+        if (selectedFile != null) {
+            JOptionPane.showMessageDialog(this, "Loading file: " + selectedFile);
+            // Code to load and display selected file's contents
+        } else {
+            JOptionPane.showMessageDialog(this, "No file selected.");
         }
     }
 
     private String getGeneratedImagePath(File inputFile) {
-        // Get the parent directory of the .mxl file
         String parentDir = inputFile.getParent();
-
-        // Get the base name of the file (without extension)
-        String baseName = inputFile.getName().replaceFirst("[.][^.]+$", ""); // Remove the extension
-
-        // Build the image file path (e.g., same name, different extension)
-        String imagePath = parentDir + File.separator + baseName + ".png"; // Assuming the image is a PNG
-
-        return imagePath; // Return the path as a String
+        String baseName = inputFile.getName().replaceFirst("[.][^.]+$", "");
+        return parentDir + File.separator + baseName + ".png";
     }
 
     private void displaySheetMusicWithNotes(String imagePath) {
-        // For now, we'll simulate that the notes are extracted and their positions are known
-        // This would be dynamic based on the actual parsing of the MusicXML file
-        java.util.List<Note> notes = java.util.List.of(
+        List<Note> notes = List.of(
                 new Note("C4", 100, 200),
                 new Note("D4", 150, 220),
                 new Note("E4", 200, 240),
                 new Note("F4", 250, 260)
         );
-
-        // Create and display the sheet music with letter notes overlay
         SwingUtilities.invokeLater(() -> new SheetMusicDisplay(imagePath, notes));
     }
 
     public static void main(String[] args) {
-        // Run the application
         SwingUtilities.invokeLater(() -> {
             InvisiNoteApp app = new InvisiNoteApp();
             app.setVisible(true);
