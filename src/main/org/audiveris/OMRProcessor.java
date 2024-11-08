@@ -1,47 +1,33 @@
 package org.audiveris;
 
-
 import org.audiveris.omr.Main;
-import org.audiveris.omr.score.Score;
-
 import java.io.File;
-import javax.swing.JOptionPane;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Arrays;
 
 public class OMRProcessor {
     public String process(File imageFile) throws Exception {
-        String[] args = new String[] { "-batch", imageFile.getAbsolutePath() };
+        // Arguments to process the image file in batch mode
+        String[] args = { "-batch", "-export", imageFile.getAbsolutePath() };
         System.out.println("Running Audiveris with arguments: " + Arrays.toString(args));
-        Main.main(args); // Start Audiveris processing
+        Main.main(args);
 
-        // Define the output directory and OMR file
+        // Define expected directory and file names
         String baseName = imageFile.getName().replace(".png", "");
-        File outputDir = new File(imageFile.getParent(), "Audiveris\\" + baseName);
-        File omrFile = new File(outputDir, baseName + ".omr");
+        File outputDir = new File("C:\\Users\\s_cyi\\OneDrive\\Documents\\Audiveris", baseName);
 
-        // Check if the OMR file was generated
-        if (!omrFile.exists()) {
-            throw new IOException("OMR file not found at path: " + omrFile.getAbsolutePath());
-        }
-
-        // Convert the OMR file to MusicXML
-        String[] convertArgs = new String[] { "-batch", omrFile.getAbsolutePath() };
-        System.out.println("Converting OMR file to MusicXML with arguments: " + Arrays.toString(convertArgs));
-        Main.main(convertArgs); // Attempt to convert to MusicXML
-
-        // Check if the MusicXML file was generated
-        String musicXmlPath = outputDir.getAbsolutePath() + "\\" + baseName + ".musicxml";
-        File musicXmlFile = new File(musicXmlPath);
+        // Locate .mxl or .musicxml file
+        File musicXmlFile = new File(outputDir, baseName + ".mxl");
         if (!musicXmlFile.exists()) {
-            throw new IOException("MusicXML file not found at path: " + musicXmlPath);
+            musicXmlFile = new File(outputDir, baseName + ".musicxml");
+            if (!musicXmlFile.exists()) {
+                throw new IOException("MusicXML file not found at path: " + musicXmlFile.getAbsolutePath());
+            }
         }
 
-        // Return MusicXML content or path
+        // Return MusicXML content for display in your app
         return new String(Files.readAllBytes(musicXmlFile.toPath()));
     }
-
 }
-
 
