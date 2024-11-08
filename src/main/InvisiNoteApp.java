@@ -79,7 +79,14 @@ public class InvisiNoteApp extends JFrame {
                 return;
             }
 
+            // Process the file using the OMRProcessor
             String musicXmlFilePath = omrProcessor.process(inputFile);
+
+            // After processing, get the generated image path
+            String generatedImagePath = getGeneratedImagePath(inputFile);
+
+            // Display the sheet music with the letter notes overlay
+            displaySheetMusicWithNotes(generatedImagePath);
 
         } catch (IOException e) {
             JOptionPane.showMessageDialog(this, "I/O error during processing: " + e.getMessage());
@@ -93,6 +100,33 @@ public class InvisiNoteApp extends JFrame {
         }
     }
 
+    private String getGeneratedImagePath(File inputFile) {
+        // Get the parent directory of the .mxl file
+        String parentDir = inputFile.getParent();
+
+        // Get the base name of the file (without extension)
+        String baseName = inputFile.getName().replaceFirst("[.][^.]+$", ""); // Remove the extension
+
+        // Build the image file path (e.g., same name, different extension)
+        String imagePath = parentDir + File.separator + baseName + ".png"; // Assuming the image is a PNG
+
+        return imagePath; // Return the path as a String
+    }
+
+    private void displaySheetMusicWithNotes(String imagePath) {
+        // For now, we'll simulate that the notes are extracted and their positions are known
+        // This would be dynamic based on the actual parsing of the MusicXML file
+        java.util.List<Note> notes = java.util.List.of(
+                new Note("C4", 100, 200),
+                new Note("D4", 150, 220),
+                new Note("E4", 200, 240),
+                new Note("F4", 250, 260)
+        );
+
+        // Create and display the sheet music with letter notes overlay
+        SwingUtilities.invokeLater(() -> new SheetMusicDisplay(imagePath, notes));
+    }
+
     public static void main(String[] args) {
         // Run the application
         SwingUtilities.invokeLater(() -> {
@@ -101,7 +135,3 @@ public class InvisiNoteApp extends JFrame {
         });
     }
 }
-
-
-
-
